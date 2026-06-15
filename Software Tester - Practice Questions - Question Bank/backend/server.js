@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const examDbPath = path.resolve(__dirname, '../../data_exam/exam.db');
+const examDbPath = path.resolve(__dirname, 'exam.db');
 const examDb = new sqlite3.Database(examDbPath, sqlite3.OPEN_READONLY, (err) => {
     if (err) console.error("Error opening exam DB:", err.message);
 });
