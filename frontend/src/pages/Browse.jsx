@@ -142,33 +142,68 @@ export default function Browse() {
               <h3 className="text-2xl font-medium leading-relaxed text-slate-100 relative z-10 mb-8" dangerouslySetInnerHTML={{__html: q.content}}></h3>
 
               <div className="space-y-4 relative z-10 mb-8">
-                {options.map((opt, i) => {
-                    const char = optionChars[i];
-                    const isCorrect = String(q.correct_answer).includes(char);
-                    
-                    let boxClass = "p-5 rounded-2xl border-2 flex items-center gap-6 transition-all text-lg ";
-                    if (isVisible && isCorrect) {
-                        boxClass += "border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
-                    } else {
-                        boxClass += "border-slate-700/50 glass opacity-80";
-                    }
+                {q.type === 'choice' || q.type === 'multi_choice' || q.type === 'boolean' ? (
+                  options.map((opt, i) => {
+                      const char = optionChars[i];
+                      const isCorrect = String(q.correct_answer).includes(char);
+                      
+                      let boxClass = "p-5 rounded-2xl border-2 flex items-center gap-6 transition-all text-lg ";
+                      if (isVisible && isCorrect) {
+                          boxClass += "border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                      } else {
+                          boxClass += "border-slate-700/50 glass opacity-80";
+                      }
 
-                    return (
-                        <div key={i} className={boxClass}>
-                            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl font-bold text-base ${isVisible && isCorrect ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                                {char}
-                            </div>
-                            <span className={isVisible && isCorrect ? 'text-green-100 font-medium' : 'text-slate-300'} dangerouslySetInnerHTML={{__html: opt}}></span>
+                      return (
+                          <div key={i} className={boxClass}>
+                              <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl font-bold text-base ${isVisible && isCorrect ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                                  {char}
+                              </div>
+                              <span className={isVisible && isCorrect ? 'text-green-100 font-medium' : 'text-slate-300'} dangerouslySetInnerHTML={{__html: opt}}></span>
+                          </div>
+                      )
+                  })
+                ) : null}
+
+                {q.type === 'text' && (
+                    <div className="relative z-10">
+                        <textarea 
+                            disabled
+                            placeholder="（此为主观文字题，当前为查阅模式）"
+                            className="w-full min-h-[200px] p-6 rounded-2xl border-2 border-slate-700/50 bg-slate-900/50 text-slate-500 text-lg transition-all font-mono resize-y cursor-not-allowed italic"
+                        />
+                    </div>
+                )}
+
+                {q.type === 'file' && (
+                    <div className="relative z-10">
+                        <div className="flex flex-col items-center justify-center w-full h-48 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-800/20 text-slate-500 transition-all">
+                            <span className="font-medium text-lg">（此为主观文件上传题，当前为查阅模式）</span>
                         </div>
-                    )
-                })}
+                    </div>
+                )}
               </div>
 
-              <div className={`transition-all duration-300 overflow-hidden ${isVisible ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4">
-                      <div className="font-bold text-emerald-400 text-lg">正确答案：</div>
-                      <div className="text-emerald-300 font-black text-2xl">{q.correct_answer}</div>
-                  </div>
+              <div className={`transition-all duration-300 overflow-hidden ${isVisible ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  {q.type === 'choice' || q.type === 'multi_choice' || q.type === 'boolean' ? (
+                      <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-4">
+                          <div className="font-bold text-emerald-400 text-lg">正确答案：</div>
+                          <div className="text-emerald-300 font-black text-2xl">{q.correct_answer}</div>
+                      </div>
+                  ) : (
+                      <div className="p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5">
+                          <div className="font-bold text-blue-400 text-lg mb-4">参考答案 (需人工批阅)：</div>
+                          {q.type === 'text' ? (
+                             <pre className="p-4 rounded-xl bg-slate-900/80 text-green-300 font-mono text-sm whitespace-pre-wrap overflow-x-auto border border-slate-700">
+                                 {q.correct_answer || '（暂无标准参考代码）'}
+                             </pre>
+                          ) : (
+                             <div className="text-slate-400 italic">
+                                 {q.correct_answer || '请提交文件以供批阅。'}
+                             </div>
+                          )}
+                      </div>
+                  )}
               </div>
           </div>
       );

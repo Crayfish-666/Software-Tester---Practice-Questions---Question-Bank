@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Check, X, ArrowRight, ArrowLeft, Loader2, Trophy, Star, LayoutList, LayoutTemplate, Send, ArrowDownToLine, ArrowUpToLine, FastForward, FileText, ChevronLeft } from 'lucide-react';
+import { Check, X, ArrowRight, ArrowLeft, Loader2, Trophy, Star, LayoutList, LayoutTemplate, Send, ArrowDownToLine, ArrowUpToLine, FastForward, FileText, ChevronLeft, UploadCloud } from 'lucide-react';
 
 export default function Study() {
   const { paperId } = useParams();
@@ -11,6 +11,7 @@ export default function Study() {
   const [showResult, setShowResult] = useState(false);
   const [loading, setLoading] = useState(true);
   const [score, setScore] = useState(0);
+  const [subjectiveTotal, setSubjectiveTotal] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   
   const [viewMode, setViewMode] = useState('card'); // 'card' | 'list'
@@ -52,21 +53,28 @@ export default function Study() {
   const submitPaper = () => {
     if (showResult) return;
     let currentScore = 0;
+    let subjectiveScore = 0;
     
     questions.forEach(q => {
         const userAnswer = answers[q.id];
-        if (userAnswer === q.correct_answer) {
-            currentScore++;
-        } else if (userAnswer !== q.correct_answer) {
-            fetch('http://localhost:3001/api/mistake', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question_id: q.id, paper_id: paperId })
-            });
+        
+        if (q.type === 'text' || q.type === 'file') {
+            subjectiveScore += q.score || 0;
+        } else {
+            if (userAnswer === q.correct_answer) {
+                currentScore += q.score || 0;
+            } else if (userAnswer !== q.correct_answer) {
+                fetch('http://localhost:3001/api/mistake', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question_id: q.id, paper_id: paperId })
+                });
+            }
         }
     });
 
     setScore(currentScore);
+    setSubjectiveTotal(subjectiveScore);
     setShowResult(true);
 
     fetch('http://localhost:3001/api/history', {
@@ -170,47 +178,101 @@ export default function Study() {
               <h3 className="text-2xl font-medium leading-relaxed text-slate-100 relative z-10 mb-8" dangerouslySetInnerHTML={{__html: q.content}}></h3>
 
               <div className="space-y-4 relative z-10">
-                {options.map((opt, i) => {
-                  const char = optionChars[i];
-                  const isSelected = selectedOption === char;
-                  const isCorrect = q.correct_answer === char;
-                  
-                  let btnClass = "w-full text-left p-5 rounded-2xl border-2 transition-all flex items-center gap-6 text-lg group relative overflow-hidden ";
-                  
-                  if (!showResult) {
-                    btnClass += isSelected 
-                      ? "bg-blue-600/20 border-blue-500 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.2)]" 
-                      : "glass border-transparent hover:border-slate-600 hover:bg-slate-800 text-slate-300";
-                  } else {
-                    if (isCorrect) btnClass += "bg-green-500/20 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.15)]";
-                    else if (isSelected) btnClass += "bg-red-500/20 border-red-500 text-red-100";
-                    else btnClass += "glass border-transparent opacity-40";
-                  }
+                {q.type === 'choice' || q.type === 'multi_choice' || q.type === 'boolean' ? (
+                  options.map((opt, i) => {
+                    const char = optionChars[i];
+                    const isSelected = selectedOption === char;
+                    const isCorrect = q.correct_answer === char;
+                    
+                    let btnClass = "w-full text-left p-5 rounded-2xl border-2 transition-all flex items-center gap-6 text-lg group relative overflow-hidden ";
+                    
+                    if (!showResult) {
+                      btnClass += isSelected 
+                        ? "bg-blue-600/20 border-blue-500 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.2)]" 
+                        : "glass border-transparent hover:border-slate-600 hover:bg-slate-800 text-slate-300";
+                    } else {
+                      if (isCorrect) btnClass += "bg-green-500/20 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.15)]";
+                      else if (isSelected) btnClass += "bg-red-500/20 border-red-500 text-red-100";
+                      else btnClass += "glass border-transparent opacity-40";
+                    }
 
-                  return (
-                    <button key={i} onClick={() => handleSelect(q.id, char)} className={btnClass} disabled={showResult}>
-                      <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl font-bold text-base transition-all ${
-                        isSelected && !showResult ? 'bg-blue-500 text-white' : 
-                        showResult && isCorrect ? 'bg-green-500 text-white' :
-                        showResult && isSelected && !isCorrect ? 'bg-red-500 text-white' :
-                        'bg-slate-700 text-slate-400 group-hover:bg-slate-600'
-                      }`}>
-                        {showResult && isCorrect ? <Check size={20} /> : showResult && isSelected && !isCorrect ? <X size={20} /> : char}
-                      </div>
-                      <span className="leading-relaxed relative z-10" dangerouslySetInnerHTML={{__html: opt}}></span>
-                    </button>
-                  );
-                })}
+                    return (
+                      <button key={i} onClick={() => handleSelect(q.id, char)} className={btnClass} disabled={showResult}>
+                        <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl font-bold text-base transition-all ${
+                          isSelected && !showResult ? 'bg-blue-500 text-white' : 
+                          showResult && isCorrect ? 'bg-green-500 text-white' :
+                          showResult && isSelected && !isCorrect ? 'bg-red-500 text-white' :
+                          'bg-slate-700 text-slate-400 group-hover:bg-slate-600'
+                        }`}>
+                          {showResult && isCorrect ? <Check size={20} /> : showResult && isSelected && !isCorrect ? <X size={20} /> : char}
+                        </div>
+                        <span className="leading-relaxed relative z-10" dangerouslySetInnerHTML={{__html: opt}}></span>
+                      </button>
+                    );
+                  })
+                ) : null}
+
+                {q.type === 'text' && (
+                    <div className="relative z-10 mb-8">
+                        <textarea 
+                            value={selectedOption || ''}
+                            onChange={(e) => handleSelect(q.id, e.target.value)}
+                            disabled={showResult}
+                            placeholder="请在此输入解答内容或代码..."
+                            className="w-full min-h-[200px] p-6 rounded-2xl border-2 border-slate-700/50 bg-slate-900/50 text-slate-300 text-lg focus:outline-none focus:border-blue-500/50 focus:bg-slate-800/80 transition-all font-mono shadow-inner resize-y disabled:opacity-70 disabled:cursor-not-allowed"
+                        />
+                    </div>
+                )}
+
+                {q.type === 'file' && (
+                    <div className="relative z-10 mb-8">
+                        <label className={`flex flex-col items-center justify-center w-full h-48 rounded-2xl border-2 border-dashed ${showResult ? 'border-slate-700 bg-slate-800/20 cursor-not-allowed opacity-70' : 'border-slate-600/50 bg-slate-800/30 hover:bg-slate-800/60 hover:border-blue-500/50 cursor-pointer'} transition-all group`}>
+                            <UploadCloud size={48} className={`mb-4 transition-colors ${showResult ? 'text-slate-600' : 'text-slate-500 group-hover:text-blue-400'}`} />
+                            <span className={`font-medium text-lg transition-colors ${showResult ? 'text-slate-500' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                                {selectedOption ? `已选文件: ${selectedOption}` : '点击上传运行截图 / 文件'}
+                            </span>
+                            {!showResult && (
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) handleSelect(q.id, file.name);
+                                    }}
+                                />
+                            )}
+                        </label>
+                    </div>
+                )}
               </div>
 
               {showResult && (
-                 <div className="mt-8 p-6 rounded-2xl glass border border-slate-700/50 flex items-center gap-4 relative z-10">
-                     {selectedOption === q.correct_answer ? (
-                         <div className="flex items-center gap-3 text-green-400 font-bold"><Check size={24}/> 回答正确</div>
+                 <div className="mt-8 relative z-10">
+                     {q.type === 'choice' || q.type === 'multi_choice' || q.type === 'boolean' ? (
+                         <div className="p-6 rounded-2xl glass border border-slate-700/50 flex items-center gap-4">
+                             {selectedOption === q.correct_answer ? (
+                                 <div className="flex items-center gap-3 text-green-400 font-bold"><Check size={24}/> 回答正确</div>
+                             ) : (
+                                 <div className="flex items-center gap-3 text-red-400 font-bold">
+                                     <X size={24}/> 
+                                     回答错误。正确答案是 <span className="text-2xl ml-2">{q.correct_answer}</span>
+                                 </div>
+                             )}
+                         </div>
                      ) : (
-                         <div className="flex items-center gap-3 text-red-400 font-bold">
-                             <X size={24}/> 
-                             回答错误。正确答案是 <span className="text-2xl ml-2">{q.correct_answer}</span>
+                         <div className="p-6 rounded-2xl glass border border-blue-500/30 bg-blue-500/5">
+                             <div className="flex items-center gap-2 text-blue-400 font-bold mb-4">
+                                 <Check size={20}/> 参考答案 (需人工批阅)
+                             </div>
+                             {q.type === 'text' ? (
+                                <pre className="p-4 rounded-xl bg-slate-900/80 text-green-300 font-mono text-sm whitespace-pre-wrap overflow-x-auto border border-slate-700">
+                                    {q.correct_answer || '（暂无标准参考代码）'}
+                                </pre>
+                             ) : (
+                                <div className="text-slate-400 italic">
+                                    {q.correct_answer || '请提交文件以供批阅。'}
+                                </div>
+                             )}
                          </div>
                      )}
                  </div>
@@ -303,7 +365,24 @@ export default function Study() {
               <div className="glass p-8 rounded-3xl mb-8 flex flex-col items-center justify-center border-t-4 border-green-500 animate-in zoom-in max-w-4xl mx-auto">
                   <div className="w-20 h-20 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mb-4"><Trophy size={40} /></div>
                   <h2 className="text-3xl font-black text-white">考试完成</h2>
-                  <p className="text-slate-400 mt-2">准确率: {Math.round((score/questions.length)*100)}%</p>
+                  <div className="flex gap-12 mt-6">
+                      <div className="text-center">
+                          <p className="text-slate-400 text-sm uppercase tracking-wider mb-1">自动客观题得分</p>
+                          <p className="text-4xl font-bold text-green-400">{score}</p>
+                      </div>
+                      {subjectiveTotal > 0 && (
+                          <div className="text-center">
+                              <p className="text-slate-400 text-sm uppercase tracking-wider mb-1">主观题待批改</p>
+                              <p className="text-4xl font-bold text-blue-400">{subjectiveTotal}</p>
+                          </div>
+                      )}
+                  </div>
+                  {subjectiveTotal > 0 && (
+                      <div className="mt-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm flex items-center gap-3 max-w-lg">
+                          <FileText size={24} className="flex-shrink-0" />
+                          <p>注：本试卷包含价值 {subjectiveTotal} 分的主观题（文本/文件上传），系统无法自动评分。该部分分数不计入客观题得分，需由教师人工批阅。</p>
+                      </div>
+                  )}
               </div>
           )}
 
